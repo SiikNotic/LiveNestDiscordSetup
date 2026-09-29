@@ -24,6 +24,8 @@ export const T: Dict = {
   step2: { en: "Select server", es: "Elegir servidor" },
   step3: { en: "Dry-run audit", es: "Auditoría previa" },
   step4: { en: "Apply", es: "Aplicar" },
+  chooseTemplate: { en: "Choose a server template", es: "Elige una plantilla de servidor" },
+  chooseTemplateBody: { en: "Pick the structure you are installing. Roles, channels and permissions belong to the selected template.", es: "Elige la estructura que vas a instalar. Los roles, canales y permisos pertenecen a la plantilla seleccionada." },
   selectGuild: { en: "Select your LiveNest server", es: "Selecciona tu servidor LiveNest" },
   selectGuildBody: {
     en: "Only servers where you have Manage Server permission are listed.",

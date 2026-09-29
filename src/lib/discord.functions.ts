@@ -2,10 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeader, setResponseHeader } from "@tanstack/react-start/server";
 
 import {
-  CATEGORIES,
   LEFTOVER_HINTS,
   PERM,
-  ROLES,
   bits,
   hexToInt,
   type ApplyLogEntry,
@@ -15,6 +13,7 @@ import {
   type CategorySpec,
   type ChannelSpec,
 } from "./livenest-blueprint";
+import { getServerTemplate } from "./server-templates";
 
 type DiscordRole = {
   id: string;
@@ -206,12 +205,13 @@ function sameOverwrites(current: Overwrite[] | undefined, desired: Overwrite[] |
 }
 
 export const auditGuild = createServerFn({ method: "POST" })
-  .inputValidator((data: { guildId: string }) => {
+  .inputValidator((data: { guildId: string; templateId?: string }) => {
     if (!data?.guildId || !/^\d{5,25}$/.test(data.guildId)) throw new Error("Invalid server id");
     return data;
   })
   .handler(async ({ data }): Promise<AuditReport> => {
     const guild = await assertGuildAccess(data.guildId);
+    const template = getServerTemplate(data.templateId ?? "gaming-community");
     const state = await loadGuild(data.guildId);
     const items: AuditItem[] = [];
 
@@ -229,7 +229,7 @@ export const auditGuild = createServerFn({ method: "POST" })
     const roleId = (n: string) => roleByName.get(norm(n))?.id;
     const everyone = state.roles.find((r) => r.name === "@everyone")?.id ?? data.guildId;
 
-    for (const spec of ROLES) {
+    for (const spec of template.roles) {
       const existing = roleByName.get(norm(spec.name));
       const wanted = bits(spec.permissions);
       if (!existing) {
@@ -259,7 +259,7 @@ export const auditGuild = createServerFn({ method: "POST" })
       state.channels.filter((c) => c.type === 4).map((c) => [norm(c.name), c]),
     );
 
-    for (const cat of CATEGORIES) {
+    for (const cat of template.categories) {
       const existingCat = catByName.get(norm(cat.name));
       items.push({
         id: `cat:${cat.name}`,
@@ -320,7 +320,7 @@ export const auditGuild = createServerFn({ method: "POST" })
     }
 
     const plannedNames = new Set(
-      CATEGORIES.flatMap((c) => [norm(c.name), ...c.channels.map((ch) => norm(ch.name))]),
+      template.categories.flatMap((c) => [norm(c.name), ...c.channels.map((ch) => norm(ch.name))]),
     );
     for (const c of state.channels) {
       if (plannedNames.has(norm(c.name))) continue;
@@ -342,12 +342,13 @@ export const auditGuild = createServerFn({ method: "POST" })
   });
 
 export const applyConfig = createServerFn({ method: "POST" })
-  .inputValidator((data: { guildId: string }) => {
+  .inputValidator((data: { guildId: string; templateId?: string }) => {
     if (!data?.guildId || !/^\d{5,25}$/.test(data.guildId)) throw new Error("Invalid server id");
     return data;
   })
   .handler(async ({ data }): Promise<ApplyResult> => {
     await assertGuildAccess(data.guildId);
+    const template = getServerTemplate(data.templateId ?? "gaming-community");
     const { botRequest } = await import("./discord.server");
     const guildId = data.guildId;
 
@@ -366,7 +367,7 @@ export const applyConfig = createServerFn({ method: "POST" })
     }
 
     // --- Roles -------------------------------------------------------------
-    for (const spec of ROLES) {
+    for (const spec of template.roles) {
       const existing = state.roles.find((r) => norm(r.name) === norm(spec.name));
       const wanted = bits(spec.permissions);
       try {
@@ -412,7 +413,7 @@ export const applyConfig = createServerFn({ method: "POST" })
     const everyone = state.roles.find((r) => r.name === "@everyone")?.id ?? guildId;
 
     // --- Categories & channels --------------------------------------------
-    for (const cat of CATEGORIES) {
+    for (const cat of template.categories) {
       let catChannel = state.channels.find((c) => c.type === 4 && norm(c.name) === norm(cat.name));
       const catOw = desiredCategoryOverwrites(cat, roleId, everyone);
       try {

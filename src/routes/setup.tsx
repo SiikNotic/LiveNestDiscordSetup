@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { AlertTriangle, Check, Loader2, LogOut, Plus, RefreshCw, Server } from "lucide-react";
+import { AlertTriangle, Check, LayoutTemplate, Loader2, LogOut, Plus, RefreshCw, Server } from "lucide-react";
 
 import { Footer, Header } from "@/components/livenest/chrome";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { LanguageProvider, useLang } from "@/lib/i18n";
 import { applyConfig, auditGuild, getStatus, listGuilds, logout } from "@/lib/discord.functions";
 import type { ApplyResult, AuditItem, AuditReport } from "@/lib/livenest-blueprint";
 import { cn } from "@/lib/utils";
+import { SERVER_TEMPLATES, TEMPLATE_CATEGORIES } from "@/lib/server-templates";
 
 export const Route = createFileRoute("/setup")({
   head: () => ({
@@ -56,6 +57,7 @@ const ACTION_STYLES: Record<AuditItem["action"], string> = {
 function SetupPage() {
   const { t, lang } = useLang();
   const [guildId, setGuildId] = useState<string | null>(null);
+  const [templateId, setTemplateId] = useState("gaming-community");
   const [report, setReport] = useState<AuditReport | null>(null);
   const [result, setResult] = useState<ApplyResult | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -76,7 +78,7 @@ function SetupPage() {
   });
 
   const audit = useMutation({
-    mutationFn: (id: string) => auditFn({ data: { guildId: id } }),
+    mutationFn: (id: string) => auditFn({ data: { guildId: id, templateId } }),
     onSuccess: (data) => {
       setReport(data);
       setResult(null);
@@ -84,7 +86,7 @@ function SetupPage() {
   });
 
   const apply = useMutation({
-    mutationFn: (id: string) => applyFn({ data: { guildId: id } }),
+    mutationFn: (id: string) => applyFn({ data: { guildId: id, templateId } }),
     onSuccess: (data) => setResult(data),
   });
 
@@ -156,6 +158,31 @@ function SetupPage() {
 
         {connected && (
           <div className="space-y-8">
+            <section className="panel p-6">
+              <h2 className="flex items-center gap-2 text-lg font-semibold"><LayoutTemplate className="size-5 text-primary" /> {t("chooseTemplate")}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">{t("chooseTemplateBody")}</p>
+              <div className="mt-4 space-y-4">
+                {TEMPLATE_CATEGORIES.map((category) => {
+                  const items = SERVER_TEMPLATES.filter((x) => x.category === category);
+                  return items.length ? (
+                    <div key={category}>
+                      <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{category}</div>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {items.map((tpl) => (
+                          <button key={tpl.id} type="button" onClick={() => { setTemplateId(tpl.id); setReport(null); setResult(null); }}
+                            className={cn("rounded-lg border p-3 text-left transition-colors", templateId === tpl.id ? "border-primary/60 bg-primary/10" : "border-border bg-surface-2/50 hover:border-primary/40")}>
+                            <div className="flex items-center gap-2 text-sm font-semibold">{tpl.name}{templateId === tpl.id && <Check className="ml-auto size-4 text-primary" />}</div>
+                            <div className="mt-1 text-xs text-muted-foreground">{lang === "en" ? tpl.description : tpl.descriptionEs}</div>
+                            <div className="mt-2 text-[10px] uppercase tracking-wide text-muted-foreground">{tpl.categories.length} categories · {tpl.roles.length} roles · {tpl.categories.reduce((n, cat) => n + cat.channels.length, 0)} channels</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null;
+                })}
+              </div>
+            </section>
+
             <section className="panel p-6">
               <h2 className="text-lg font-semibold">{t("selectGuild")}</h2>
               <p className="mt-1 text-sm text-muted-foreground">{t("selectGuildBody")}</p>

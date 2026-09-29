@@ -171,10 +171,21 @@ function SetupPage() {
                       <div className="grid gap-2 sm:grid-cols-2">
                         {items.map((tpl) => (
                           <button key={tpl.id} type="button" onClick={() => { setTemplateId(tpl.id); setReport(null); setResult(null); }}
-                            className={cn("rounded-lg border p-3 text-left transition-colors", templateId === tpl.id ? "border-primary/60 bg-primary/10" : "border-border bg-surface-2/50 hover:border-primary/40")}>
-                            <div className="flex items-center gap-2 text-sm font-semibold">{tpl.name}{templateId === tpl.id && <Check className="ml-auto size-4 text-primary" />}</div>
-                            <div className="mt-1 text-xs text-muted-foreground">{lang === "en" ? tpl.description : tpl.descriptionEs}</div>
-                            <div className="mt-2 text-[10px] uppercase tracking-wide text-muted-foreground">{tpl.categories.length} categories · {tpl.roles.length} roles · {tpl.categories.reduce((n, cat) => n + cat.channels.length, 0)} channels</div>
+                            className={cn("group relative overflow-hidden rounded-xl border p-0 text-left transition-all", templateId === tpl.id ? "border-white/30 ring-1 ring-white/20" : "border-border bg-surface-2/50 hover:border-white/20")}>
+                            <div className="relative p-4" style={{background: tpl.theme.surface}}>
+                              <div className="absolute inset-x-0 top-0 h-1" style={{background: "linear-gradient(90deg, " + tpl.theme.accent + ", " + tpl.theme.secondary + ")"}} />
+                              <div className="mb-4 flex items-center justify-between gap-2">
+                                <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[9px] font-bold tracking-widest text-white/60">{tpl.category.toUpperCase()}</span>
+                                {templateId === tpl.id && <Check className="size-4 text-white" />}
+                              </div>
+                              <div className="text-base font-bold text-white">{tpl.name}</div>
+                              <div className="mt-1 text-[9px] font-semibold tracking-[0.16em]" style={{color: tpl.theme.accent}}>{tpl.theme.tagline}</div>
+                              <div className="mt-2 text-xs leading-5 text-white/55">{lang === "en" ? tpl.description : tpl.descriptionEs}</div>
+                              <div className="mt-4 flex flex-wrap gap-1.5">
+                                {tpl.roles.slice(0,4).map(role => <span key={role.name} className="rounded-full border border-white/10 bg-black/20 px-2 py-1 text-[9px]" style={{color: role.color}}>{role.name}</span>)}
+                              </div>
+                              <div className="mt-4 text-[9px] uppercase tracking-wider text-white/35">{tpl.categories.length} categories · {tpl.roles.length} roles · {tpl.categories.reduce((n, cat) => n + cat.channels.length, 0)} channels</div>
+                            </div>
                           </button>
                         ))}
                       </div>
@@ -192,8 +203,8 @@ function SetupPage() {
                 </div>
                 <div className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{selectedTemplate.name}</div>
               </div>
-              <div className="grid min-h-[520px] bg-[#0b0d10] text-white md:grid-cols-[230px_1fr]">
-                <aside className="border-b border-white/10 bg-[#111318] p-3 md:border-b-0 md:border-r">
+              <div className="grid min-h-[560px] text-white md:grid-cols-[250px_1fr]" style={{background:selectedTemplate.theme.surface}}>
+                <aside className="border-b border-white/10 bg-black/20 p-3 md:border-b-0 md:border-r">
                   <div className="mb-4 flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2">
                     <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-[#D4AF37] to-[#8b6b19] text-xs font-black text-black">LN</span>
                     <div className="min-w-0"><div className="truncate text-sm font-semibold">Your Server</div><div className="text-[10px] text-white/45">LiveNest template</div></div>
@@ -237,7 +248,7 @@ function SetupPage() {
                       ))}
                     </div>
                   </div>
-                  <div className="border-t border-white/10 bg-[#111318] px-5 py-4">
+                  <div className="border-t border-white/10 bg-black/20 px-5 py-4">
                     <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-white/35">Roles preview</div>
                     <div className="flex flex-wrap gap-2">
                       {selectedTemplate.roles.slice(0, 10).map((role) => (

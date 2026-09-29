@@ -61,6 +61,7 @@ function SetupPage() {
   const [report, setReport] = useState<AuditReport | null>(null);
   const [result, setResult] = useState<ApplyResult | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const selectedTemplate = SERVER_TEMPLATES.find((x) => x.id === templateId) ?? SERVER_TEMPLATES[0];
 
   const statusFn = useServerFn(getStatus);
   const guildsFn = useServerFn(listGuilds);
@@ -180,6 +181,72 @@ function SetupPage() {
                     </div>
                   ) : null;
                 })}
+              </div>
+            </section>
+
+            <section className="panel overflow-hidden p-0">
+              <div className="flex flex-col border-b border-border px-6 py-5 sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <h2 className="flex items-center gap-2 text-lg font-semibold"><Server className="size-5 text-primary" /> Discord Preview</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">Vista simulada del servidor antes de instalar la plantilla. No modifica Discord.</p>
+                </div>
+                <div className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{selectedTemplate.name}</div>
+              </div>
+              <div className="grid min-h-[520px] bg-[#0b0d10] text-white md:grid-cols-[230px_1fr]">
+                <aside className="border-b border-white/10 bg-[#111318] p-3 md:border-b-0 md:border-r">
+                  <div className="mb-4 flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2">
+                    <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-[#D4AF37] to-[#8b6b19] text-xs font-black text-black">LN</span>
+                    <div className="min-w-0"><div className="truncate text-sm font-semibold">Your Server</div><div className="text-[10px] text-white/45">LiveNest template</div></div>
+                  </div>
+                  <div className="space-y-3">
+                    {selectedTemplate.categories.slice(0, 9).map((category) => (
+                      <div key={category.name}>
+                        <div className="mb-1 px-2 text-[9px] font-bold tracking-widest text-white/40">{category.name}</div>
+                        <div className="space-y-0.5">
+                          {category.channels.slice(0, 5).map((channel) => (
+                            <div key={channel.name} className="flex items-center gap-2 rounded px-2 py-1 text-xs text-white/65 hover:bg-white/5">
+                              <span className="text-white/35">{channel.kind === "voice" ? "🔊" : "#"}</span>{channel.name}
+                            </div>
+                          ))}
+                          {category.channels.length > 5 && <div className="px-2 text-[10px] text-white/30">+{category.channels.length - 5} more</div>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </aside>
+                <div className="flex min-w-0 flex-col">
+                  <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
+                    <span className="text-lg text-white/40">#</span>
+                    <div><div className="font-semibold">welcome・bienvenida</div><div className="text-[10px] text-white/40">Welcome channel preview</div></div>
+                  </div>
+                  <div className="flex-1 p-5 sm:p-7">
+                    <div className="mb-7 max-w-xl">
+                      <div className="mb-2 text-2xl font-bold">Welcome to your community 👋</div>
+                      <p className="text-sm leading-6 text-white/55">This is a visual preview generated from the selected template. The real Discord server will use the exact categories, channels and roles shown here.</p>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {selectedTemplate.categories.slice(0, 6).map((category) => (
+                        <div key={category.name} className="rounded-xl border border-white/10 bg-white/[0.035] p-4">
+                          <div className="mb-3 text-[10px] font-bold tracking-widest text-[#D4AF37]">{category.name}</div>
+                          <div className="space-y-1.5">
+                            {category.channels.slice(0, 4).map((channel) => (
+                              <div key={channel.name} className="flex items-center gap-2 text-xs text-white/65"><span className="text-white/30">{channel.kind === "voice" ? "🔊" : "#"}</span>{channel.name}</div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="border-t border-white/10 bg-[#111318] px-5 py-4">
+                    <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-white/35">Roles preview</div>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedTemplate.roles.slice(0, 10).map((role) => (
+                        <span key={role.name} className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px]" style={{ color: role.color }}>{role.name}</span>
+                      ))}
+                      {selectedTemplate.roles.length > 10 && <span className="rounded-full bg-white/5 px-2.5 py-1 text-[10px] text-white/40">+{selectedTemplate.roles.length - 10}</span>}
+                    </div>
+                  </div>
+                </div>
               </div>
             </section>
 

@@ -345,7 +345,6 @@ function SetupPage() {
               {t("confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
-        </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
       <Footer />

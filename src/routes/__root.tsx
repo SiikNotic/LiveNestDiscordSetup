@@ -73,6 +73,8 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  // This app is an authenticated/configuration dashboard; client-render the route tree to avoid SSR stream hangs.
+  ssr: false,
   head: () => ({
     meta: [
       { charSet: "utf-8" },

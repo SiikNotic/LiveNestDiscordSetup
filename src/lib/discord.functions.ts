@@ -2,10 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeader, setResponseHeader } from "@tanstack/react-start/server";
 
 import {
-  CATEGORIES,
   LEFTOVER_HINTS,
   PERM,
-  ROLES,
   bits,
   hexToInt,
   type ApplyLogEntry,

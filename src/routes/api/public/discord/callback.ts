@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { exchangeCode, sessionCookie } from "@/lib/discord.server";
 
+const DISCORD_REDIRECT_URI = "https://livenestdiscordsetup.onrender.com/api/public/discord/callback";
+
 export const Route = createFileRoute("/api/public/discord/callback")({
   server: {
     handlers: {
@@ -15,7 +17,7 @@ export const Route = createFileRoute("/api/public/discord/callback")({
           });
         }
         try {
-          const token = await exchangeCode(code, `${url.origin}/api/public/discord/callback`);
+          const token = await exchangeCode(code, DISCORD_REDIRECT_URI);
           const headers = new Headers({ Location: "/setup" });
           headers.append(
             "Set-Cookie",

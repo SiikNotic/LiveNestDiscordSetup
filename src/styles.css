@@ -38,3 +38,19 @@
 .error-box span{font-size:9px;color:#9d7777}
 @media(max-width:900px){.template-preview-section{grid-template-columns:1fr}.discord-body{grid-template-columns:130px 1fr}.discord-members{display:none}}
 @media(max-width:600px){.template-preview-section{padding:14px}.preview-copy{padding:4px}.discord-preview{min-height:300px}.discord-body{grid-template-columns:118px 1fr}.discord-channel-list{padding:8px 5px}.discord-chat{min-width:0}.discord-channel{font-size:7px}.discord-category strong{font-size:6px}.preview-actions .primary{width:100%;justify-content:center}.template-preview-section{margin-top:16px}}
+
+
+/* Server connection list — explicit flex sizing prevents mobile character-by-character wrapping */
+.server-list{display:grid;gap:8px;max-width:900px}
+.server-row{width:100%;min-width:0;display:flex;align-items:center;gap:12px;padding:14px 15px;border:1px solid var(--line);background:#101115;border-radius:12px}
+.server-row>div:nth-child(2){min-width:0;flex:1}
+.server-icon{width:42px;height:42px;min-width:42px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(145deg,#202329,#111318);border:1px solid #2a2d33;color:#e2c55b;font:800 15px Manrope}
+.server-row b{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:#eee}
+.server-row span{display:block;margin-top:4px;font-size:9px;color:#777b84;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.server-row>svg{width:18px;min-width:18px;color:#d4af37}
+.server-row>svg:last-child{color:#777b84}
+@media(max-width:600px){
+ .server-row{padding:12px;gap:10px}
+ .server-icon{width:38px;height:38px;min-width:38px}
+ .server-row b{font-size:11px}
+}

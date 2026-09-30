@@ -11,7 +11,6 @@ export default defineConfig({
     // This is a dashboard, not an SEO page. Use SPA mode for the UI so Render does not
     // keep an SSR stream open; server functions and /api routes remain available.
     spa: { enabled: true },
-    // Keep the custom server entry for Discord server functions and API routes.
-    server: { entry: "server" },
+    // Use TanStack Start's built-in server entry. Server functions and /api routes remain available.
   },
 });

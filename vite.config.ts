@@ -8,8 +8,10 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
   tanstackStart: {
-    // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-    // nitro/vite builds from this
+    // This is a dashboard, not an SEO page. Use SPA mode for the UI so Render does not
+    // keep an SSR stream open; server functions and /api routes remain available.
+    spa: { enabled: true },
+    // Keep the custom server entry for Discord server functions and API routes.
     server: { entry: "server" },
   },
 });

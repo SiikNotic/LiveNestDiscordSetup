@@ -608,7 +608,7 @@ const catalogTemplates:ServerTemplate[] = [
   }
 ];
 
-const templates:ServerTemplate[] = [...baseTemplates,...catalogTemplates];
+const templates:ServerTemplate[] = [...baseTemplates,...catalogTemplates.slice(0,4)];
 
 export const SERVER_TEMPLATES = templates;
 export const TEMPLATE_CATEGORIES: TemplateCategory[] = ["Gaming","Roleplay","Community","Streaming","Friends","Creator","Anime","Tech","Study","Music","Sports","Business","Art","Lifestyle"];

@@ -1745,6 +1745,10 @@ div.ln-server {
   cursor: default;
   background: var(--ln-surface);
 }
+.ln-server.is-locked {
+  cursor: default;
+  opacity: 0.75;
+}
 .ln-server.is-on {
   border-color: var(--ln-gold);
   background: #16150f;

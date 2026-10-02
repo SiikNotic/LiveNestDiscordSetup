@@ -112,6 +112,23 @@ const T = {
       "Nothing is reported as done unless the installer finishes. Check the bot's permissions and try again.",
     viewServers: "View servers",
     notInstallable: "This template isn't installable yet. Pick one marked “Installable now”.",
+    needBot: "Invite the bot to this server first, then come back — the list updates on its own.",
+    errors: {
+      bot_not_installed:
+        "The LiveNest bot isn't in this server. Press “Invite bot”, choose this server in Discord and authorize, then try again.",
+      bot_missing_permissions:
+        "The bot is in the server but lacks Manage Channels / Manage Roles. Invite it again and keep those permissions checked.",
+      server_not_authorized: "Your account can't manage this server. Sign in again with Discord.",
+      template_not_found: "This template isn't available in the installer right now.",
+      session_expired: "Your Discord session expired. Sign in again.",
+      unauthorized: "Your Discord session isn't valid. Sign in again.",
+      role_create_failed:
+        "Discord refused to create a role. Move the LiveNest bot's role above the others in Server Settings → Roles. Nothing was left half-done.",
+      category_create_failed:
+        "Discord refused to create a category. Check the bot's permissions. Nothing was left half-done.",
+      channel_create_failed:
+        "Discord refused to create a channel. Check the bot's permissions. Nothing was left half-done.",
+    } as Record<string, string>,
     // Servers
     sKicker: "Servers",
     sTitleIn: "Your Discord servers.",
@@ -215,6 +232,24 @@ const T = {
     viewServers: "Ver servidores",
     notInstallable:
       "Esta plantilla aún no se puede instalar. Elige una marcada como “Instalables ya”.",
+    needBot: "Primero invita al bot a este servidor y vuelve: la lista se actualiza sola.",
+    errors: {
+      bot_not_installed:
+        "El bot de LiveNest no está en este servidor. Pulsa “Invitar bot”, elige este servidor en Discord y autoriza; luego vuelve a intentarlo.",
+      bot_missing_permissions:
+        "El bot está en el servidor pero le faltan Gestionar canales / Gestionar roles. Invítalo de nuevo dejando esos permisos marcados.",
+      server_not_authorized:
+        "Tu cuenta no puede administrar este servidor. Vuelve a iniciar sesión con Discord.",
+      template_not_found: "Esta plantilla no está disponible en el instalador ahora mismo.",
+      session_expired: "Tu sesión de Discord caducó. Vuelve a iniciar sesión.",
+      unauthorized: "Tu sesión de Discord no es válida. Vuelve a iniciar sesión.",
+      role_create_failed:
+        "Discord no dejó crear un rol. Sube el rol del bot de LiveNest por encima de los demás en Ajustes del servidor → Roles. No quedó nada a medias.",
+      category_create_failed:
+        "Discord no dejó crear una categoría. Revisa los permisos del bot. No quedó nada a medias.",
+      channel_create_failed:
+        "Discord no dejó crear un canal. Revisa los permisos del bot. No quedó nada a medias.",
+    } as Record<string, string>,
     sKicker: "Servidores",
     sTitleIn: "Tus servidores de Discord.",
     sTitleOut: "Conecta tu Discord.",
@@ -713,16 +748,18 @@ function Builder({
 }) {
   const [step, setStep] = useState(1);
   const [mode, setMode] = useState<NameMode>("both");
-  const [guild, setGuild] = useState(preferredGuild?.guild_id || guilds[0]?.guild_id || "");
+  const firstReady = () => guilds.find((g) => g.bot_present)?.guild_id || "";
+  const [guild, setGuild] = useState(preferredGuild?.guild_id || firstReady());
   const [installing, setInstalling] = useState(false);
   const [result, setResult] = useState<InstallResult>(null);
 
   useEffect(() => {
     if (preferredGuild?.guild_id) setGuild(preferredGuild.guild_id);
-    else if (!guild && guilds[0]) setGuild(guilds[0].guild_id);
+    else if (!guilds.find((g) => g.guild_id === guild)?.bot_present) setGuild(firstReady());
   }, [guilds, preferredGuild]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const guildObj = guilds.find((g) => g.guild_id === guild);
+  const guildReady = Boolean(guildObj?.bot_present);
   const modeLabel = c.modes.find((m) => m[0] === mode)?.[1] ?? mode;
 
   const install = async () => {
@@ -730,7 +767,7 @@ function Builder({
       go("server");
       return;
     }
-    if (!selected || !guild || !selected.installable) return;
+    if (!selected || !guildReady || !selected.installable) return;
     setInstalling(true);
     try {
       setResult(
@@ -747,7 +784,7 @@ function Builder({
   };
 
   const canReach = (n: number) =>
-    n === 1 || (Boolean(selected?.installable) && (n < 4 || Boolean(guild)));
+    n === 1 || (Boolean(selected?.installable) && (n < 4 || guildReady));
 
   return (
     <>
@@ -881,12 +918,17 @@ function Builder({
               {guilds.map((g) => (
                 <label
                   key={g.guild_id}
-                  className={guild === g.guild_id ? "ln-server is-on" : "ln-server"}
+                  className={[
+                    "ln-server",
+                    guild === g.guild_id ? "is-on" : "",
+                    g.bot_present ? "" : "is-locked",
+                  ].join(" ")}
                 >
                   <input
                     type="radio"
                     name="guild"
                     checked={guild === g.guild_id}
+                    disabled={!g.bot_present}
                     onChange={() => setGuild(g.guild_id)}
                   />
                   <span className="ln-server-icon">{(g.guild_name || "?").slice(0, 1)}</span>
@@ -925,11 +967,14 @@ function Builder({
               }
             />
           )}
+          {session && guilds.length > 0 && !guildReady && (
+            <p className="ln-soon-note">{c.needBot}</p>
+          )}
           <div className="ln-panel-actions">
             <button
               type="button"
               className="ln-btn ln-btn-gold"
-              disabled={!guild}
+              disabled={!guildReady}
               onClick={() => setStep(4)}
             >
               {c.review} <ArrowRight width={16} height={16} />
@@ -958,7 +1003,11 @@ function Builder({
                 <div>
                   <h2>{c.failed}</h2>
                   <p>
-                    <b>{result.error}</b> — {c.failedBody}
+                    {c.errors[result.error] ?? (
+                      <>
+                        <b>{result.error}</b> — {c.failedBody}
+                      </>
+                    )}
                   </p>
                 </div>
               </div>
@@ -1005,7 +1054,7 @@ function Builder({
                 <button
                   type="button"
                   className="ln-btn ln-btn-gold ln-btn-lg"
-                  disabled={installing || !guild || !selected.installable}
+                  disabled={installing || !guildReady || !selected.installable}
                   onClick={install}
                 >
                   {installing ? (

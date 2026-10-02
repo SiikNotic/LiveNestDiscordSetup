@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   activateTemplates,
-  fetchInstallableIds,
+  fetchRemoteTemplates,
   readLang,
   writeLang,
   type CatalogTemplate,
@@ -35,9 +35,9 @@ function Root() {
   // Templates become installable as soon as the installer lists them; re-render once if that changes anything.
   const [, setCatalogVersion] = useState(0);
   useEffect(() => {
-    fetchInstallableIds(localStorage.getItem("livenest_discord_session") || undefined).then(
-      (ids) => {
-        if (activateTemplates(ids)) setCatalogVersion((v) => v + 1);
+    fetchRemoteTemplates(localStorage.getItem("livenest_discord_session") || undefined).then(
+      (rows) => {
+        if (activateTemplates(rows)) setCatalogVersion((v) => v + 1);
       },
     );
   }, []);

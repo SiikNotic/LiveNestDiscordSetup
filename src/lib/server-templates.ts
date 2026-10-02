@@ -197,6 +197,7 @@ const baseTemplates: ServerTemplate[] = [
 type CatalogConfig = {
   id:string; name:string; category:TemplateCategory; accent:string; secondary:string; surface:string; tagline:string;
   roleNames:string[]; roleColors:string[];
+  description?:string; descriptionEs?:string;
   sections:Array<{name:string; channels:string[]; readOnly?:boolean; voice?:boolean}>;
 };
 
@@ -204,8 +205,8 @@ const catalogTemplate = (c:CatalogConfig):ServerTemplate => ({
   id:c.id,
   name:c.name,
   category:c.category,
-  description:`A polished ${c.name} Discord template with purpose-built channels, roles, events, support and staff structure.`,
-  descriptionEs:`Plantilla premium de Discord para ${c.name}, con canales especializados, roles, eventos, soporte y estructura de staff.`,
+  description:c.description ?? `A polished ${c.name} Discord template with purpose-built channels, roles, events, support and staff structure.`,
+  descriptionEs:c.descriptionEs ?? `Plantilla premium de Discord para ${c.name}, con canales especializados, roles, eventos, soporte y estructura de staff.`,
   theme:{accent:c.accent,secondary:c.secondary,surface:c.surface,tagline:c.tagline},
   roles:baseRoles(c.roleNames.map((name,i)=>({name,color:c.roleColors[i] ?? c.accent,permissions:[]}))),
   categories:c.sections.map(section=>({
@@ -214,7 +215,123 @@ const catalogTemplate = (c:CatalogConfig):ServerTemplate => ({
   }))
 });
 
-const catalogTemplates:ServerTemplate[] = [
+// Curated 2026 set. Patterns taken from what sells on setup marketplaces and from
+// large public servers: a read-only start section first, 5–8 categories of 3–6
+// channels, emoji + divider naming kept readable, tickets and staff logs separated.
+const curatedConfigs:CatalogConfig[] = [
+  {
+    id:"minimal-starter",name:"Minimal Starter",category:"Community",accent:"#E5E7EB",secondary:"#94A3B8",surface:"#0E0F11",tagline:"CLEAN • SMALL • READY",
+    description:"Few channels on purpose. Small servers feel empty with 40 channels; this one feels busy with 10 people.",
+    descriptionEs:"Pocos canales a propósito. Un servidor pequeño con 40 canales se siente vacío; este se siente activo con 10 personas.",
+    roleNames:["⭐・Regular","📣・Pings"],roleColors:["#F5F5F4","#94A3B8"],
+    sections:[
+      {name:"📌︱START",channels:["📜︱rules","📢︱announcements"],readOnly:true},
+      {name:"💬︱CHAT",channels:["💬︱general","🖼️︱media","🔗︱links"]},
+      {name:"🔊︱VOICE",channels:["Lounge","Focus","AFK"],voice:true},
+      {name:"🛡️︱STAFF",channels:["staff","logs"]}
+    ]
+  },
+  {
+    id:"kawaii-pastel",name:"Kawaii Pastel",category:"Friends",accent:"#F9A8D4",secondary:"#A5B4FC",surface:"#1B1420",tagline:"PASTEL • SOFT • COZY",
+    description:"The pastel look people pay designers for: soft dividers, cute role names and cozy voice rooms.",
+    descriptionEs:"El estilo pastel por el que la gente paga a diseñadores: separadores suaves, roles tiernos y salas de voz acogedoras.",
+    roleNames:["🍓・Strawberry","🫐・Blueberry","🍑・Peach","🧸・Cuddle Buddy","🌙・Night Owl","🎀・Booster"],roleColors:["#F9A8D4","#A5B4FC","#FDBA74","#FDE68A","#C4B5FD","#F472B6"],
+    sections:[
+      {name:"🎀 ⋆ WELCOME",channels:["🌷︱welcome","📜︱rules","📢︱news","🎀︱roles"],readOnly:true},
+      {name:"🍓 ⋆ HANGOUT",channels:["🍓︱chat","🧁︱introductions","🐱︱pets","📸︱selfies","🌈︱memes"]},
+      {name:"🎨 ⋆ CREATIVE",channels:["🎨︱art","✂️︱edits","🎧︱music","📚︱books"]},
+      {name:"🎮 ⋆ PLAY",channels:["🎮︱games","🌙︱game-night","🎁︱giveaways"]},
+      {name:"☁️ ⋆ VOICE",channels:["☁️ Cloud Lounge","🍵 Tea Room","🎮 Game Room","💤 Sleepy"],voice:true},
+      {name:"🛡️ ⋆ STAFF",channels:["staff-chat","reports","mod-logs"]}
+    ]
+  },
+  {
+    id:"product-community",name:"Product Community",category:"Business",accent:"#6366F1",secondary:"#22D3EE",surface:"#0B0C18",tagline:"CHANGELOG • FEEDBACK • SUPPORT",
+    description:"For SaaS, apps and indie products: changelog, feature requests, bug reports, beta testers and a support desk.",
+    descriptionEs:"Para SaaS, apps y productos indie: changelog, peticiones, reportes de bugs, beta testers y soporte.",
+    roleNames:["💳・Customer","🧪・Beta Tester","🏗️・Builder","🧑‍💻・Team","📣・Changelog Ping"],roleColors:["#22D3EE","#A78BFA","#34D399","#6366F1","#94A3B8"],
+    sections:[
+      {name:"🚀︱START HERE",channels:["👋︱welcome","📜︱rules","📢︱announcements","📝︱changelog"],readOnly:true},
+      {name:"💬︱COMMUNITY",channels:["💬︱general","🙋︱introductions","🏗️︱showcase","💡︱tips"]},
+      {name:"🧭︱PRODUCT",channels:["✨︱feature-requests","🐛︱bug-reports","🗺️︱roadmap","🧪︱beta"]},
+      {name:"🎫︱SUPPORT",channels:["❓︱help","🎫︱open-ticket","📚︱docs"]},
+      {name:"🔊︱VOICE",channels:["Office Hours","Community Call","AFK"],voice:true},
+      {name:"🛡️︱TEAM",channels:["team-chat","escalations","ticket-logs","mod-logs"]}
+    ]
+  },
+  {
+    id:"trading-desk",name:"Trading Desk",category:"Business",accent:"#10B981",secondary:"#F43F5E",surface:"#06120E",tagline:"MARKETS • SIGNALS • JOURNAL",
+    description:"Markets community with read-only signals, per-market chats, trade journals and a clear risk disclaimer up top.",
+    descriptionEs:"Comunidad de mercados con señales de solo lectura, chats por mercado, diarios de trading y aviso de riesgo arriba.",
+    roleNames:["📈・Trader","💎・Premium","🎓・Mentor","🪙・Crypto","💱・Forex","📊・Stocks"],roleColors:["#10B981","#D4AF37","#38BDF8","#F59E0B","#A78BFA","#F43F5E"],
+    sections:[
+      {name:"📌︱START",channels:["👋︱welcome","📜︱rules","⚠️︱risk-disclaimer","📢︱announcements"],readOnly:true},
+      {name:"📡︱SIGNALS",channels:["📡︱signals","📰︱market-news","🗓️︱economic-calendar"],readOnly:true},
+      {name:"💬︱MARKETS",channels:["💬︱general","🪙︱crypto","💱︱forex","📊︱stocks"]},
+      {name:"📒︱LEARN",channels:["📒︱trade-journal","🧠︱strategies","📚︱resources","❓︱questions"]},
+      {name:"🔊︱VOICE",channels:["Market Open","Live Trading","Mentor Room","AFK"],voice:true},
+      {name:"🛡️︱STAFF",channels:["staff-chat","reports","mod-logs"]}
+    ]
+  },
+  {
+    id:"membership-academy",name:"Membership Academy",category:"Creator",accent:"#F59E0B",secondary:"#FB7185",surface:"#160F06",tagline:"COURSE • COHORT • ACCOUNTABILITY",
+    description:"For paid courses and memberships: modules, wins, weekly calls and accountability pods. Pair with a paid-role bot.",
+    descriptionEs:"Para cursos y membresías de pago: módulos, logros, llamadas semanales y grupos de responsabilidad. Úsala con un bot de roles de pago.",
+    roleNames:["🎓・Student","💎・Member","🏆・Alumni","🧑‍🏫・Coach","🔥・Accountability"],roleColors:["#F59E0B","#D4AF37","#FB7185","#38BDF8","#F97316"],
+    sections:[
+      {name:"🎓︱ORIENTATION",channels:["👋︱welcome","📜︱rules","🧭︱start-here","📢︱announcements"],readOnly:true},
+      {name:"📚︱MODULES",channels:["📘︱module-1","📗︱module-2","📙︱module-3","📎︱resources"]},
+      {name:"💬︱COMMUNITY",channels:["💬︱general","🏆︱wins","🙋︱questions","🤝︱networking"]},
+      {name:"🔥︱ACCOUNTABILITY",channels:["🎯︱weekly-goals","✅︱daily-check-in","👥︱pods"]},
+      {name:"🔊︱LIVE",channels:["Weekly Call","Co-working","Hot Seat","AFK"],voice:true},
+      {name:"🛡️︱STAFF",channels:["coach-chat","student-issues","mod-logs"]}
+    ]
+  },
+  {
+    id:"vtuber-community",name:"VTuber Community",category:"Streaming",accent:"#C084FC",secondary:"#67E8F9",surface:"#110A1C",tagline:"STREAMS • FANART • MEMBERS",
+    description:"Built around a VTuber: stream alerts, fanart and clips, member-only lounge and a lore channel.",
+    descriptionEs:"Pensada para un VTuber: avisos de stream, fanart y clips, sala exclusiva para miembros y canal de lore.",
+    roleNames:["🌟・Fan","💜・Member","🎨・Fan Artist","✂️・Clipper","🔔・Live Ping","🛡️・Stream Mod"],roleColors:["#C084FC","#A855F7","#F472B6","#67E8F9","#FACC15","#5865F2"],
+    sections:[
+      {name:"🌙︱WELCOME",channels:["🌙︱welcome","📜︱rules","📢︱announcements","🔴︱going-live"],readOnly:true},
+      {name:"💬︱FANS",channels:["💬︱general","📖︱lore","🗳️︱stream-ideas","🌈︱memes"]},
+      {name:"🎨︱CREATE",channels:["🎨︱fanart","✂️︱clips","🎵︱covers","🖼️︱emotes-wip"]},
+      {name:"💜︱MEMBERS",channels:["💜︱members-chat","🎁︱perks","🗓️︱members-stream"]},
+      {name:"🔊︱VOICE",channels:["Watch Party","Collab Room","Fan Hangout","AFK"],voice:true},
+      {name:"🛡️︱STAFF",channels:["mod-chat","stream-mods","reports","mod-logs"]}
+    ]
+  },
+  {
+    id:"indie-game-studio",name:"Indie Game Studio",category:"Tech",accent:"#F97316",secondary:"#84CC16",surface:"#140B05",tagline:"DEVLOGS • PLAYTESTS • WISHLIST",
+    description:"For a game in development: devlogs, playtest sign-ups, bug reports by build and a press kit channel.",
+    descriptionEs:"Para un juego en desarrollo: devlogs, inscripción a playtests, bugs por build y canal de press kit.",
+    roleNames:["🕹️・Player","🧪・Playtester","🎨・Artist","🧑‍💻・Developer","📰・Press","🔔・Devlog Ping"],roleColors:["#F97316","#84CC16","#F472B6","#38BDF8","#E5E7EB","#FACC15"],
+    sections:[
+      {name:"🕹️︱START",channels:["👋︱welcome","📜︱rules","📢︱announcements","📰︱devlog"],readOnly:true},
+      {name:"💬︱COMMUNITY",channels:["💬︱general","🖼️︱screenshots","💡︱suggestions","🎨︱fan-content"]},
+      {name:"🧪︱PLAYTEST",channels:["📝︱playtest-signup","🐛︱bug-reports","🗣️︱feedback","📦︱builds"]},
+      {name:"📰︱PRESS",channels:["📰︱press-kit","🎥︱creators"]},
+      {name:"🔊︱VOICE",channels:["Dev Stream","Playtest Room","Hangout","AFK"],voice:true},
+      {name:"🛡️︱TEAM",channels:["dev-chat","art","design","bug-triage","mod-logs"]}
+    ]
+  },
+  {
+    id:"tabletop-rpg",name:"Tabletop RPG",category:"Roleplay",accent:"#B45309",secondary:"#DC2626",surface:"#140D07",tagline:"CAMPAIGNS • DICE • LORE",
+    description:"For D&D and other tabletop games: campaign tables, character sheets, scheduling and a dice room.",
+    descriptionEs:"Para D&D y otros juegos de mesa: mesas de campaña, fichas de personaje, horarios y sala de dados.",
+    roleNames:["🎲・Player","🧙・Game Master","📜・Lorekeeper","🗓️・Session Ping","🐉・Veteran"],roleColors:["#F59E0B","#DC2626","#A78BFA","#38BDF8","#D4AF37"],
+    sections:[
+      {name:"🏰︱TAVERN DOOR",channels:["👋︱welcome","📜︱rules","📢︱announcements","🗓️︱session-schedule"],readOnly:true},
+      {name:"🍺︱TAVERN",channels:["🍺︱general","🎲︱dice-rolls","🖼️︱art-and-maps","🌈︱memes"]},
+      {name:"🐉︱CAMPAIGNS",channels:["🗺️︱campaign-a","🗺️︱campaign-b","🧾︱character-sheets","📖︱lore"]},
+      {name:"📝︱LFG",channels:["🔎︱looking-for-group","🧙︱gm-recruitment","🆕︱one-shots"]},
+      {name:"🔊︱TABLES",channels:["Table 1","Table 2","Tavern","AFK"],voice:true},
+      {name:"🛡️︱STAFF",channels:["gm-chat","reports","mod-logs"]}
+    ]
+  }
+];
+
+const catalogConfigs:CatalogConfig[] = [
   {
     id:"minecraft-community",name:"Minecraft Community",category:"Gaming",accent:"#22C55E",secondary:"#A3E635",surface:"#07160D",tagline:"SURVIVAL • BUILDING • EVENTS",
     roleNames:["⛏️・Builder","🧭・Explorer","⚔️・PvP","🌾・Farmer","💎・VIP","📣・Event Ping"],roleColors:["#22C55E","#38BDF8","#EF4444","#84CC16","#D4AF37","#F59E0B"],
@@ -608,7 +725,7 @@ const catalogTemplates:ServerTemplate[] = [
   }
 ];
 
-const templates:ServerTemplate[] = [...baseTemplates,...catalogTemplates.slice(0,4)];
+const templates:ServerTemplate[] = [...baseTemplates,...[...curatedConfigs,...catalogConfigs].map(catalogTemplate)];
 
 export const SERVER_TEMPLATES = templates;
 export const TEMPLATE_CATEGORIES: TemplateCategory[] = ["Gaming","Roleplay","Community","Streaming","Friends","Creator","Anime","Tech","Study","Music","Sports","Business","Art","Lifestyle"];

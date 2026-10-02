@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertTriangle, Check, LayoutTemplate, Loader2, LogOut, Plus, RefreshCw, Server } from "lucide-react";
 
 import { Footer, Header } from "@/components/livenest/chrome";
@@ -62,6 +62,17 @@ function SetupPage() {
   const [result, setResult] = useState<ApplyResult | null>(null);
   const [confirming, setConfirming] = useState(false);
   const selectedTemplate = SERVER_TEMPLATES.find((x) => x.id === templateId) ?? SERVER_TEMPLATES[0];
+
+  // A template picked on the landing page arrives as ?template=… and survives the OAuth round-trip via localStorage.
+  useEffect(() => {
+    const fromUrl = new URLSearchParams(window.location.search).get("template");
+    const wanted = fromUrl ?? window.localStorage.getItem("livenest-template");
+    if (wanted && SERVER_TEMPLATES.some((x) => x.id === wanted)) setTemplateId(wanted);
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem("livenest-template", templateId);
+  }, [templateId]);
 
   const statusFn = useServerFn(getStatus);
   const guildsFn = useServerFn(listGuilds);

@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, ArrowUpRight, Check, Hash, Volume2, X } from "lucide-react";
+import { ArrowRight, Check, Eye, Hash, Minus, X } from "lucide-react";
 
-import { DiscordRail, DiscordSidebar } from "@/components/livenest/discord-mock";
+import { ChannelIcon, DiscordRail, DiscordSidebar } from "@/components/livenest/discord-mock";
 import { Footer, Header } from "@/components/livenest/chrome";
 import {
   Accordion,
@@ -11,8 +11,10 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { LanguageProvider, useLang, type Lang } from "@/lib/i18n";
 import {
+  CURATED_TEMPLATE_IDS,
   SERVER_TEMPLATES,
   TEMPLATE_CATEGORIES,
   type ServerTemplate,
@@ -78,6 +80,11 @@ const COPY = {
     showAll: (n: number) => `Show all ${n} templates`,
     showLess: "Show fewer",
     use: "Use this template",
+    close: "Keep browsing",
+    newBadge: "New",
+    kindLabels: { text: "Text", announcement: "Announcement", forum: "Forum", voice: "Voice" },
+    communityNote:
+      "Forum and announcement channels need Community enabled on your server. Without it they're created as text channels.",
     cats: "categories",
     chans: "channels",
     roles: "roles",
@@ -103,6 +110,17 @@ const COPY = {
     ],
     planTitle: "Dry run · your-server",
     planFoot: "0 deleted · leftovers are listed, never touched",
+    cmpKicker: "Options",
+    cmpTitle: "Three ways to set up a server.",
+    cmpCols: ["LiveNest", "Discord templates", "Hiring someone"],
+    cmpRows: [
+      ["Works on the server you already have", true, false, true],
+      ["Shows every change before applying", true, false, "partial"],
+      ["Roles with colours and safe permissions", true, "partial", true],
+      ["Run again later without duplicates", true, false, false],
+      ["Ready in", "~2 min", "~2 min", "1–3 days"],
+    ],
+    cmpNote: "Setup gigs on freelance marketplaces typically run $15–110 per server.",
     neverKicker: "Guardrails",
     neverTitle: "What LiveNest will never do",
     never: [
@@ -172,6 +190,11 @@ const COPY = {
     showAll: (n: number) => `Ver las ${n} plantillas`,
     showLess: "Ver menos",
     use: "Usar esta plantilla",
+    close: "Seguir mirando",
+    newBadge: "Nueva",
+    kindLabels: { text: "Texto", announcement: "Anuncios", forum: "Foro", voice: "Voz" },
+    communityNote:
+      "Los canales de foro y de anuncios necesitan tener Comunidad activado en tu servidor. Sin eso se crean como canales de texto.",
     cats: "categorías",
     chans: "canales",
     roles: "roles",
@@ -197,6 +220,18 @@ const COPY = {
     ],
     planTitle: "Prueba en seco · tu-servidor",
     planFoot: "0 borrados · los restos se listan, nunca se tocan",
+    cmpKicker: "Opciones",
+    cmpTitle: "Tres formas de montar un servidor.",
+    cmpCols: ["LiveNest", "Plantillas de Discord", "Contratar a alguien"],
+    cmpRows: [
+      ["Funciona en el servidor que ya tienes", true, false, true],
+      ["Te enseña cada cambio antes de aplicarlo", true, false, "partial"],
+      ["Roles con colores y permisos seguros", true, "partial", true],
+      ["Repetirlo más tarde sin duplicados", true, false, false],
+      ["Listo en", "~2 min", "~2 min", "1–3 días"],
+    ],
+    cmpNote:
+      "Los encargos de configuración en marketplaces freelance suelen costar entre 15 y 110 USD por servidor.",
     neverKicker: "Garantías",
     neverTitle: "Lo que LiveNest nunca hará",
     never: [
@@ -294,6 +329,7 @@ function Landing() {
         <Stats />
         <Templates />
         <HowItWorks />
+        <Compare />
         <Guardrails />
         <Faq />
         <FinalCta />
@@ -493,14 +529,21 @@ function Templates() {
   const c = COPY[lang];
   const [filter, setFilter] = useState<TemplateCategory | "all">("all");
   const [expanded, setExpanded] = useState(false);
+  const [preview, setPreview] = useState<ServerTemplate | null>(null);
 
   const counts = useMemo(() => {
     const m = new Map<TemplateCategory, number>();
     for (const t of SERVER_TEMPLATES) m.set(t.category, (m.get(t.category) ?? 0) + 1);
     return m;
   }, []);
-  const list =
-    filter === "all" ? SERVER_TEMPLATES : SERVER_TEMPLATES.filter((t) => t.category === filter);
+  const list = useMemo(() => {
+    const items =
+      filter === "all" ? SERVER_TEMPLATES : SERVER_TEMPLATES.filter((t) => t.category === filter);
+    // Newest hand-picked templates first; sort is stable, so the rest keep their order.
+    return [...items].sort(
+      (a, b) => Number(CURATED_TEMPLATE_IDS.has(b.id)) - Number(CURATED_TEMPLATE_IDS.has(a.id)),
+    );
+  }, [filter]);
   const visible = expanded ? list : list.slice(0, INITIAL_VISIBLE);
 
   return (
@@ -543,7 +586,7 @@ function Templates() {
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {visible.map((tpl) => (
-          <TemplateCard key={tpl.id} tpl={tpl} lang={lang} />
+          <TemplateCard key={tpl.id} tpl={tpl} lang={lang} onOpen={setPreview} />
         ))}
       </div>
 
@@ -554,34 +597,50 @@ function Templates() {
           </Button>
         </div>
       )}
+      <TemplatePreview tpl={preview} lang={lang} onClose={() => setPreview(null)} />
     </section>
   );
 }
 
-function TemplateCard({ tpl, lang }: { tpl: ServerTemplate; lang: Lang }) {
+function rememberTemplate(id: string) {
+  try {
+    window.localStorage.setItem("livenest-template", id);
+  } catch {
+    /* storage can be blocked; the query string still carries the choice */
+  }
+}
+
+function TemplateCard({
+  tpl,
+  lang,
+  onOpen,
+}: {
+  tpl: ServerTemplate;
+  lang: Lang;
+  onOpen: (tpl: ServerTemplate) => void;
+}) {
   const c = COPY[lang];
   // Show the first channels of the two most characteristic categories (skip the generic welcome block).
   const preview = tpl.categories.slice(1, 3);
 
   return (
-    <a
-      href={`/setup?template=${encodeURIComponent(tpl.id)}`}
-      onClick={() => {
-        try {
-          window.localStorage.setItem("livenest-template", tpl.id);
-        } catch {
-          /* storage can be blocked; the query string still carries the choice */
-        }
-      }}
-      className="group flex flex-col overflow-hidden rounded-xl border border-border bg-surface transition-[border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-foreground/25"
+    <button
+      type="button"
+      onClick={() => onOpen(tpl)}
+      className="group flex flex-col overflow-hidden rounded-xl border border-border bg-surface text-left transition-[border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-foreground/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <div className="relative h-40 overflow-hidden bg-[#2B2D31] px-3 pt-3">
+      <div className="relative h-40 w-full overflow-hidden bg-[#2B2D31] px-3 pt-3">
         <div
           className="absolute inset-x-0 top-0 h-1"
           style={{
             background: `linear-gradient(90deg, ${tpl.theme.accent}, ${tpl.theme.secondary})`,
           }}
         />
+        {CURATED_TEMPLATE_IDS.has(tpl.id) && (
+          <span className="absolute right-3 top-3 rounded bg-primary px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase text-primary-foreground">
+            {c.newBadge}
+          </span>
+        )}
         <div className="mask-fade-b h-full">
           {preview.map((cat) => (
             <div key={cat.name} className="mb-2">
@@ -593,11 +652,7 @@ function TemplateCard({ tpl, lang }: { tpl: ServerTemplate; lang: Lang }) {
                   key={ch.name}
                   className="flex items-center gap-1.5 px-1.5 py-[3px] text-[13px] text-[#949BA4]"
                 >
-                  {ch.kind === "voice" ? (
-                    <Volume2 className="size-3.5 shrink-0 opacity-70" />
-                  ) : (
-                    <Hash className="size-3.5 shrink-0 opacity-70" />
-                  )}
+                  <ChannelIcon kind={ch.kind} className="size-3.5 shrink-0 opacity-70" />
                   <span className="truncate">{ch.name}</span>
                 </div>
               ))}
@@ -615,10 +670,10 @@ function TemplateCard({ tpl, lang }: { tpl: ServerTemplate; lang: Lang }) {
           ))}
         </div>
       </div>
-      <div className="flex flex-1 flex-col p-4">
+      <div className="flex w-full flex-1 flex-col p-4">
         <div className="flex items-start justify-between gap-3">
           <h3 className="text-[17px] font-semibold leading-tight">{tpl.name}</h3>
-          <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-foreground" />
+          <Eye className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
         </div>
         <p className="mt-1.5 line-clamp-2 text-sm text-muted-foreground">
           {lang === "es" ? tpl.descriptionEs : tpl.description}
@@ -635,7 +690,114 @@ function TemplateCard({ tpl, lang }: { tpl: ServerTemplate; lang: Lang }) {
           </span>
         </div>
       </div>
-    </a>
+    </button>
+  );
+}
+
+function TemplatePreview({
+  tpl,
+  lang,
+  onClose,
+}: {
+  tpl: ServerTemplate | null;
+  lang: Lang;
+  onClose: () => void;
+}) {
+  const c = COPY[lang];
+  const kinds = useMemo(() => {
+    const k = { text: 0, voice: 0, forum: 0, announcement: 0 };
+    for (const cat of tpl?.categories ?? []) for (const ch of cat.channels) k[ch.kind] += 1;
+    return k;
+  }, [tpl]);
+
+  return (
+    <Dialog open={Boolean(tpl)} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-h-[92vh] max-w-4xl gap-0 overflow-hidden border-border bg-background p-0 sm:rounded-2xl">
+        {tpl && (
+          <div className="grid max-h-[92vh] md:grid-cols-[300px_1fr]">
+            <DiscordSidebar
+              template={tpl}
+              serverName={tpl.name}
+              maxCategories={20}
+              maxChannels={20}
+              className="hidden h-[min(640px,92vh)] md:flex [&>div:last-child]:overflow-y-auto [&>div:last-child]:[mask-image:none]"
+            />
+            <div className="flex max-h-[92vh] min-h-0 flex-col overflow-y-auto p-6 sm:p-8 [&>*]:shrink-0">
+              <p
+                className="font-mono text-xs uppercase tracking-[0.18em]"
+                style={{ color: tpl.theme.accent }}
+              >
+                {tpl.theme.tagline}
+              </p>
+              <DialogTitle className="mt-3 font-display text-3xl font-bold">{tpl.name}</DialogTitle>
+              <DialogDescription className="mt-2 text-[15px] leading-relaxed text-muted-foreground">
+                {lang === "es" ? tpl.descriptionEs : tpl.description}
+              </DialogDescription>
+
+              <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-4">
+                {(
+                  [
+                    ["text", kinds.text],
+                    ["announcement", kinds.announcement],
+                    ["forum", kinds.forum],
+                    ["voice", kinds.voice],
+                  ] as const
+                ).map(([kind, n]) => (
+                  <div key={kind} className="bg-background px-3 py-3">
+                    <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <ChannelIcon kind={kind} className="size-3.5" /> {c.kindLabels[kind]}
+                    </dt>
+                    <dd className="mt-1 font-mono text-xl">{n}</dd>
+                  </div>
+                ))}
+              </dl>
+              {kinds.forum + kinds.announcement > 0 && (
+                <p className="mt-2 text-xs text-muted-foreground">{c.communityNote}</p>
+              )}
+
+              <h4 className="mt-6 text-sm font-semibold capitalize">{c.roles}</h4>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {tpl.roles.map((r) => (
+                  <span
+                    key={r.name}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs"
+                  >
+                    <span className="size-2 rounded-full" style={{ background: r.color }} />
+                    {r.name}
+                  </span>
+                ))}
+              </div>
+
+              <div className="md:hidden">
+                <h4 className="mt-6 text-sm font-semibold capitalize">{c.cats}</h4>
+                <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+                  {tpl.categories.map((cat) => (
+                    <li key={cat.name}>
+                      <span className="text-foreground">{cat.name}</span> · {cat.channels.length}{" "}
+                      {c.chans}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="mt-auto flex flex-col gap-2 pt-8 sm:flex-row">
+                <Button asChild size="lg" className="h-11">
+                  <a
+                    href={`/setup?template=${encodeURIComponent(tpl.id)}`}
+                    onClick={() => rememberTemplate(tpl.id)}
+                  >
+                    {c.use} <ArrowRight className="size-4" />
+                  </a>
+                </Button>
+                <Button size="lg" variant="ghost" className="h-11" onClick={onClose}>
+                  {c.close}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -710,6 +872,60 @@ function HowItWorks() {
           </div>
         </div>
       </div>
+    </section>
+  );
+}
+
+function CompareCell({ value, strong }: { value: boolean | string; strong?: boolean }) {
+  if (value === true)
+    return (
+      <Check className={cn("mx-auto size-5", strong ? "text-primary" : "text-foreground/70")} />
+    );
+  if (value === false) return <X className="mx-auto size-5 text-muted-foreground/50" />;
+  if (value === "partial") return <Minus className="mx-auto size-5 text-muted-foreground" />;
+  return <span className={cn("font-mono text-sm", strong && "text-primary")}>{value}</span>;
+}
+
+function Compare() {
+  const { lang } = useLang();
+  const c = COPY[lang];
+  return (
+    <section className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
+      <p className="font-mono text-xs uppercase tracking-[0.18em] text-primary">{c.cmpKicker}</p>
+      <h2 className="mt-4 text-3xl font-bold leading-tight sm:text-[2.75rem]">{c.cmpTitle}</h2>
+      <div className="-mx-4 mt-10 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+        <table className="w-full min-w-[620px] border-collapse text-left">
+          <thead>
+            <tr className="border-b border-border">
+              <th className="w-[40%] py-4" />
+              {c.cmpCols.map((col, i) => (
+                <th
+                  key={col}
+                  className={cn(
+                    "px-3 py-4 text-center text-sm font-semibold",
+                    i === 0 ? "rounded-t-lg bg-primary/10 text-primary" : "text-muted-foreground",
+                  )}
+                >
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {c.cmpRows.map(([label, ...cells]) => (
+              <tr key={String(label)} className="border-b border-border/70">
+                <td className="py-4 pr-4 text-[15px]">{label}</td>
+                {cells.map((v, i) => (
+                  <td key={i} className={cn("px-3 py-4 text-center", i === 0 && "bg-primary/10")}>
+                    <CompareCell value={v} strong={i === 0} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-4 text-xs text-muted-foreground">{c.cmpNote}</p>
     </section>
   );
 }

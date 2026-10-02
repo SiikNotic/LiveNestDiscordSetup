@@ -47,6 +47,8 @@ export const Route = createFileRoute("/setup")({
   ),
 });
 
+const KIND_ICON = { text: "#", voice: "🔊", forum: "💬", announcement: "📢" } as const;
+
 const ACTION_STYLES: Record<AuditItem["action"], string> = {
   create: "bg-success/15 text-success border-success/30",
   update: "bg-blue/15 text-blue border-blue/30",
@@ -227,7 +229,7 @@ function SetupPage() {
                         <div className="space-y-0.5">
                           {category.channels.slice(0, 5).map((channel) => (
                             <div key={channel.name} className="flex items-center gap-2 rounded px-2 py-1 text-xs text-white/65 hover:bg-white/5">
-                              <span className="text-white/35">{channel.kind === "voice" ? "🔊" : "#"}</span>{channel.name}
+                              <span className="text-white/35">{KIND_ICON[channel.kind]}</span>{channel.name}
                             </div>
                           ))}
                           {category.channels.length > 5 && <div className="px-2 text-[10px] text-white/30">+{category.channels.length - 5} more</div>}
@@ -252,7 +254,7 @@ function SetupPage() {
                           <div className="mb-3 text-[10px] font-bold tracking-widest text-[#D4AF37]">{category.name}</div>
                           <div className="space-y-1.5">
                             {category.channels.slice(0, 4).map((channel) => (
-                              <div key={channel.name} className="flex items-center gap-2 text-xs text-white/65"><span className="text-white/30">{channel.kind === "voice" ? "🔊" : "#"}</span>{channel.name}</div>
+                              <div key={channel.name} className="flex items-center gap-2 text-xs text-white/65"><span className="text-white/30">{KIND_ICON[channel.kind]}</span>{channel.name}</div>
                             ))}
                           </div>
                         </div>
@@ -343,6 +345,14 @@ function SetupPage() {
               <section className="panel p-6">
                 <h2 className="text-lg font-semibold">{t("auditTitle")}</h2>
                 <p className="mt-1 text-sm text-muted-foreground">{t("auditBody")}</p>
+                {report.community === false &&
+                  selectedTemplate?.categories.some((cat) =>
+                    cat.channels.some((ch) => ch.kind === "forum" || ch.kind === "announcement"),
+                  ) && (
+                    <p className="mt-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+                      {t("notCommunity")}
+                    </p>
+                  )}
                 <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {(["create", "update", "skip", "review"] as const).map((k) => (
                     <div

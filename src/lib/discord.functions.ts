@@ -113,22 +113,78 @@ async function assertGuildAccess(guildId: string) {
   return guild;
 }
 
-type GuildState = { roles: DiscordRole[]; channels: DiscordChannel[]; botIn: boolean };
+type GuildState = {
+  roles: DiscordRole[];
+  channels: DiscordChannel[];
+  botIn: boolean;
+  /** Community servers can host forum and announcement channels. */
+  community: boolean;
+};
 
 async function loadGuild(guildId: string): Promise<GuildState> {
   const { botRequest } = await import("./discord.server");
   try {
-    const [roles, channels] = await Promise.all([
+    const [roles, channels, info] = await Promise.all([
       botRequest<DiscordRole[]>(`/guilds/${guildId}/roles`),
       botRequest<DiscordChannel[]>(`/guilds/${guildId}/channels`),
+      botRequest<{ features?: string[] }>(`/guilds/${guildId}`).catch(() => ({ features: [] as string[] })),
     ]);
-    return { roles, channels, botIn: true };
+    return {
+      roles,
+      channels,
+      botIn: true,
+      community: Boolean(info.features?.includes("COMMUNITY")),
+    };
   } catch {
-    return { roles: [], channels: [], botIn: false };
+    return { roles: [], channels: [], botIn: false, community: false };
   }
 }
 
+const TEXT_LIKE = [0, 5, 15];
+
+/** Discord channel type to create for a spec on this server. */
+function desiredType(ch: ChannelSpec, community: boolean): number {
+  if (ch.kind === "voice") return 2;
+  if (community && ch.kind === "forum") return 15;
+  if (community && ch.kind === "announcement") return 5;
+  return 0;
+}
+
+/**
+ * Text, announcement and forum channels with the same name are treated as the same
+ * channel, so a template that upgrades #news to an announcement channel never
+ * duplicates the #news a server already has.
+ */
+function findChannel(channels: DiscordChannel[], ch: ChannelSpec) {
+  return channels.find(
+    (c) =>
+      norm(c.name) === norm(ch.name) &&
+      (ch.kind === "voice" ? c.type === 2 : TEXT_LIKE.includes(c.type)),
+  );
+}
+
+const KIND_LABEL: Record<number, { en: string; es: string }> = {
+  0: { en: "text", es: "texto" },
+  2: { en: "voice", es: "voz" },
+  5: { en: "announcement", es: "anuncios" },
+  15: { en: "forum", es: "foro" },
+};
+
 const norm = (s: string) => s.trim().toLowerCase();
+
+/**
+ * Finds a role by its plain name, also matching decorated template names such as
+ * "🛡️・Administrator" when asked for "Administrator".
+ */
+function makeRoleLookup(roles: DiscordRole[]) {
+  return (name: string) => {
+    const n = norm(name);
+    return (
+      roles.find((r) => norm(r.name) === n) ??
+      roles.find((r) => norm(r.name).split("・").pop()?.trim() === n)
+    )?.id;
+  };
+}
 
 function desiredCategoryOverwrites(cat: CategorySpec, roleId: (n: string) => string | undefined, everyone: string) {
   if (!cat.privateTo) return null;
@@ -226,7 +282,7 @@ export const auditGuild = createServerFn({ method: "POST" })
     }
 
     const roleByName = new Map(state.roles.map((r) => [norm(r.name), r]));
-    const roleId = (n: string) => roleByName.get(norm(n))?.id;
+    const roleId = makeRoleLookup(state.roles);
     const everyone = state.roles.find((r) => r.name === "@everyone")?.id ?? data.guildId;
 
     for (const spec of template.roles) {
@@ -285,13 +341,12 @@ export const auditGuild = createServerFn({ method: "POST" })
       }
 
       for (const ch of cat.channels) {
-        const existing = state.channels.find(
-          (c) => norm(c.name) === norm(ch.name) && c.type === (ch.kind === "voice" ? 2 : 0),
-        );
+        const existing = findChannel(state.channels, ch);
         const desiredOw = desiredChannelOverwrites(ch, roleId, everyone);
+        const kind = KIND_LABEL[desiredType(ch, state.community)] ?? KIND_LABEL[0]!;
         let action: AuditItem["action"] = "create";
-        let detail = `Create ${ch.kind} channel`;
-        let detailEs = `Crear canal de ${ch.kind === "voice" ? "voz" : "texto"}`;
+        let detail = `Create ${kind.en} channel`;
+        let detailEs = `Crear canal de ${kind.es}`;
         if (existing) {
           const parentOff = existingCat ? existing.parent_id !== existingCat.id : false;
           const owOff = !sameOverwrites(existing.permission_overwrites, desiredOw);
@@ -338,7 +393,14 @@ export const auditGuild = createServerFn({ method: "POST" })
     const counts = { create: 0, update: 0, skip: 0, review: 0 };
     for (const i of items) counts[i.action] += 1;
 
-    return { guildId: guild.id, guildName: guild.name, botInGuild: true, items, counts };
+    return {
+      guildId: guild.id,
+      guildName: guild.name,
+      botInGuild: true,
+      community: state.community,
+      items,
+      counts,
+    };
   });
 
 export const applyConfig = createServerFn({ method: "POST" })
@@ -409,7 +471,7 @@ export const applyConfig = createServerFn({ method: "POST" })
     }
 
     state = await loadGuild(guildId);
-    const roleId = (n: string) => state.roles.find((r) => norm(r.name) === norm(n))?.id;
+    const roleId = makeRoleLookup(state.roles);
     const everyone = state.roles.find((r) => r.name === "@everyone")?.id ?? guildId;
 
     // --- Categories & channels --------------------------------------------
@@ -447,20 +509,35 @@ export const applyConfig = createServerFn({ method: "POST" })
       }
 
       for (const ch of cat.channels) {
-        const type = ch.kind === "voice" ? 2 : 0;
+        const type = desiredType(ch, state.community);
         const desiredOw = desiredChannelOverwrites(ch, roleId, everyone);
-        const existing = state.channels.find((c) => c.type === type && norm(c.name) === norm(ch.name));
+        const existing = findChannel(state.channels, ch);
         try {
           if (!existing) {
-            const createdCh = await botRequest<DiscordChannel>(`/guilds/${guildId}/channels`, {
-              method: "POST",
-              body: JSON.stringify({
-                name: ch.name,
-                type,
-                parent_id: catChannel.id,
-                ...(desiredOw ? { permission_overwrites: desiredOw } : {}),
-              }),
-            });
+            const create = (t: number) =>
+              botRequest<DiscordChannel>(`/guilds/${guildId}/channels`, {
+                method: "POST",
+                body: JSON.stringify({
+                  name: ch.name,
+                  type: t,
+                  parent_id: catChannel.id,
+                  ...(ch.topic && t !== 2 ? { topic: ch.topic } : {}),
+                  ...(desiredOw ? { permission_overwrites: desiredOw } : {}),
+                }),
+              });
+            let createdCh: DiscordChannel;
+            try {
+              createdCh = await create(type);
+            } catch (error) {
+              // Forum/announcement can still be refused (e.g. missing features); fall back to text.
+              if (type !== 5 && type !== 15) throw error;
+              createdCh = await create(0);
+              push(
+                "warn",
+                `#${ch.name}: ${KIND_LABEL[type]!.en} channels unavailable here, created as text`,
+                `#${ch.name}: canales de ${KIND_LABEL[type]!.es} no disponibles aquí, creado como texto`,
+              );
+            }
             state.channels.push(createdCh);
             created += 1;
             push("success", `Created #${ch.name}`, `#${ch.name} creado`);

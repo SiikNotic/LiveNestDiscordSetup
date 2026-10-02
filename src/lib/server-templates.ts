@@ -1,4 +1,5 @@
 import type { CategorySpec, RoleSpec } from "./livenest-blueprint";
+import { CATALOG_COPY, enrichTemplate } from "./template-enrichment";
 
 export type TemplateCategory = "Gaming" | "Roleplay" | "Community" | "Streaming" | "Friends" | "Creator" | "Anime" | "Tech" | "Study" | "Music" | "Sports" | "Business" | "Art" | "Lifestyle";
 
@@ -205,8 +206,8 @@ const catalogTemplate = (c:CatalogConfig):ServerTemplate => ({
   id:c.id,
   name:c.name,
   category:c.category,
-  description:c.description ?? `A polished ${c.name} Discord template with purpose-built channels, roles, events, support and staff structure.`,
-  descriptionEs:c.descriptionEs ?? `Plantilla premium de Discord para ${c.name}, con canales especializados, roles, eventos, soporte y estructura de staff.`,
+  description:c.description ?? CATALOG_COPY[c.id]?.[0] ?? `A polished ${c.name} Discord template with purpose-built channels, roles, events, support and staff structure.`,
+  descriptionEs:c.descriptionEs ?? CATALOG_COPY[c.id]?.[1] ?? `Plantilla premium de Discord para ${c.name}, con canales especializados, roles, eventos, soporte y estructura de staff.`,
   theme:{accent:c.accent,secondary:c.secondary,surface:c.surface,tagline:c.tagline},
   roles:baseRoles(c.roleNames.map((name,i)=>({name,color:c.roleColors[i] ?? c.accent,permissions:[]}))),
   categories:c.sections.map(section=>({
@@ -725,7 +726,10 @@ const catalogConfigs:CatalogConfig[] = [
   }
 ];
 
-const templates:ServerTemplate[] = [...baseTemplates,...[...curatedConfigs,...catalogConfigs].map(catalogTemplate)];
+const templates:ServerTemplate[] = [...baseTemplates,...[...curatedConfigs,...catalogConfigs].map(catalogTemplate)].map(enrichTemplate);
+
+/** Hand-picked 2026 templates, highlighted as new in the gallery. */
+export const CURATED_TEMPLATE_IDS = new Set(curatedConfigs.map(c=>c.id));
 
 export const SERVER_TEMPLATES = templates;
 export const TEMPLATE_CATEGORIES: TemplateCategory[] = ["Gaming","Roleplay","Community","Streaming","Friends","Creator","Anime","Tech","Study","Music","Sports","Business","Art","Lifestyle"];

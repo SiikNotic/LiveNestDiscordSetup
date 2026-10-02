@@ -73,6 +73,10 @@ export const T: Dict = {
     en: "The LiveNest bot is not in this server yet. Invite it with Manage Roles and Manage Channels, then re-run the audit.",
     es: "El bot de LiveNest aún no está en este servidor. Invítalo con Gestionar roles y Gestionar canales y vuelve a auditar.",
   },
+  notCommunity: {
+    en: "This server isn't a Community server, so forum and announcement channels will be created as regular text channels. Enable Community in Server Settings and run the audit again to get them.",
+    es: "Este servidor no es de Comunidad, así que los canales de foro y de anuncios se crearán como canales de texto normales. Activa Comunidad en los Ajustes del servidor y vuelve a auditar para tenerlos.",
+  },
   leftovers: { en: "Possible leftovers", es: "Posibles restos" },
   leftoversBody: {
     en: "Found but never touched by this tool. Remove them manually if you want.",

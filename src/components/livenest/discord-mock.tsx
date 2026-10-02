@@ -1,4 +1,6 @@
-import { ChevronDown, Hash, Volume2 } from "lucide-react";
+import { ChevronDown, Hash, Megaphone, MessagesSquare, Volume2 } from "lucide-react";
+
+import type { ChannelKind } from "@/lib/livenest-blueprint";
 
 import type { ServerTemplate } from "@/lib/server-templates";
 import { cn } from "@/lib/utils";
@@ -66,11 +68,7 @@ export function DiscordSidebar({
                   animate && "animate-row-in",
                 )}
               >
-                {ch.kind === "voice" ? (
-                  <Volume2 className="size-[18px] shrink-0 opacity-70" />
-                ) : (
-                  <Hash className="size-[18px] shrink-0 opacity-70" />
-                )}
+                <ChannelIcon kind={ch.kind} className="size-[18px] shrink-0 opacity-70" />
                 <span className="truncate">{ch.name}</span>
               </div>
             ))}
@@ -109,4 +107,16 @@ export function DiscordRail({ accent }: { accent: string }) {
       ))}
     </div>
   );
+}
+
+const CHANNEL_ICONS = {
+  text: Hash,
+  voice: Volume2,
+  forum: MessagesSquare,
+  announcement: Megaphone,
+} satisfies Record<ChannelKind, unknown>;
+
+export function ChannelIcon({ kind, className }: { kind: ChannelKind; className?: string }) {
+  const Icon = CHANNEL_ICONS[kind];
+  return <Icon className={className} />;
 }

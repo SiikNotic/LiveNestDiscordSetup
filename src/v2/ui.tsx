@@ -138,7 +138,7 @@ export function DiscordRail({ accent }: { accent: string }) {
   );
 }
 
-function TemplateCard({
+export function TemplateCard({
   t,
   lang,
   onOpen,

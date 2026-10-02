@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
-import { readLang, writeLang, type CatalogTemplate, type Lang } from "./v2/catalog";
+import {
+  activateTemplates,
+  fetchInstallableIds,
+  readLang,
+  writeLang,
+  type CatalogTemplate,
+  type Lang,
+} from "./v2/catalog";
 import { Landing } from "./v2/Landing";
 import { Dashboard } from "./v2/Dashboard";
 
@@ -25,6 +32,15 @@ function Root() {
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
+  // Templates become installable as soon as the installer lists them; re-render once if that changes anything.
+  const [, setCatalogVersion] = useState(0);
+  useEffect(() => {
+    fetchInstallableIds(localStorage.getItem("livenest_discord_session") || undefined).then(
+      (ids) => {
+        if (activateTemplates(ids)) setCatalogVersion((v) => v + 1);
+      },
+    );
+  }, []);
   const go = (r: "landing" | "app") => {
     if (r === "app" && !location.pathname.startsWith("/app"))
       history.pushState({}, "", "/app" + location.search);

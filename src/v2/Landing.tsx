@@ -28,6 +28,8 @@ const COPY = {
     tplTitle: "Start from a server that already works.",
     tplBody:
       "Open any template to see every category, channel and role. Six install today; the rest are designed and arrive as the installer grows.",
+    tplBodyAll:
+      "Open any template to see every category, channel and role, then install it in a couple of clicks.",
     howKicker: "How it works",
     howTitle: "Four steps, and you see everything first.",
     steps: [
@@ -131,6 +133,8 @@ const COPY = {
     tplTitle: "Empieza con un servidor que ya funciona.",
     tplBody:
       "Abre cualquier plantilla para ver cada categoría, canal y rol. Seis se instalan hoy; el resto ya está diseñado y llegará cuando crezca el instalador.",
+    tplBodyAll:
+      "Abre cualquier plantilla para ver cada categoría, canal y rol, e instálala en un par de clics.",
     howKicker: "Cómo funciona",
     howTitle: "Cuatro pasos, y lo ves todo antes.",
     steps: [
@@ -226,6 +230,7 @@ export function Landing({
   useTemplate: (t: CatalogTemplate) => void;
 }) {
   const c = COPY[lang];
+  const allLive = INSTALLABLE.length === CATALOG.length;
   return (
     <div className="ln">
       <header className="ln-header">
@@ -266,7 +271,7 @@ export function Landing({
               <p className="ln-kicker">{c.tplKicker}</p>
               <h2>{c.tplTitle}</h2>
             </div>
-            <p className="ln-muted">{c.tplBody}</p>
+            <p className="ln-muted">{allLive ? c.tplBodyAll : c.tplBody}</p>
           </div>
           <Gallery lang={lang} onUse={useTemplate} />
         </section>
@@ -593,7 +598,7 @@ function Faq({ lang }: { lang: Lang }) {
     <section id="faq" className="ln-wrap ln-section ln-faq">
       <h2>{c.faqTitle}</h2>
       <div>
-        {c.faq.map(([q, a], n) => (
+        {(INSTALLABLE.length === CATALOG.length ? c.faq.slice(0, -1) : c.faq).map(([q, a], n) => (
           <div key={q} className={open === n ? "ln-faq-item is-open" : "ln-faq-item"}>
             <button
               type="button"

@@ -237,6 +237,42 @@ export const CATALOG: CatalogTemplate[] = [
 
 export const INSTALLABLE = CATALOG.filter((t) => t.installable);
 
+/** LiveNest installer (Supabase edge functions). */
+export const API = "https://zxpentlarsbdilmyfxfc.supabase.co/functions/v1";
+
+/**
+ * Marks templates as installable once the installer reports them (action=templates).
+ * Mutates the shared catalog in place and returns true when anything changed, so the
+ * caller can re-render. Unknown ids are ignored.
+ */
+export function activateTemplates(ids: Iterable<string>): boolean {
+  const wanted = new Set(ids);
+  let changed = false;
+  for (const t of CATALOG) {
+    if (!t.installable && wanted.has(t.id)) {
+      t.installable = true;
+      INSTALLABLE.push(t);
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+/** Asks the installer which templates it can build; silently keeps the defaults on any failure. */
+export async function fetchInstallableIds(session?: string): Promise<string[]> {
+  try {
+    const r = await fetch(`${API}/discord-server?action=templates`, {
+      headers: session ? { Authorization: `Bearer ${session}` } : {},
+    });
+    if (!r.ok) return [];
+    const d = (await r.json()) as { templates?: Array<{ id: string } | string>; ids?: string[] };
+    const list = d.templates ?? d.ids ?? [];
+    return list.map((x) => (typeof x === "string" ? x : x.id)).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 export const CATEGORY_ES: Record<string, string> = {
   Gaming: "Gaming",
   Roleplay: "Roleplay",

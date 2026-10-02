@@ -111,11 +111,17 @@ export const ROLES: readonly RoleSpec[] = [
   },
 ];
 
-export type ChannelKind = "text" | "voice";
+/**
+ * forum and announcement need a Community-enabled server; elsewhere they are
+ * created as plain text channels so a template always installs.
+ */
+export type ChannelKind = "text" | "voice" | "forum" | "announcement";
 
 export type ChannelSpec = {
   name: string;
   kind: ChannelKind;
+  /** Channel topic, set only when the channel is created so later edits are kept. */
+  topic?: string;
   /** Read-only for regular members (@everyone denied Send Messages). */
   readOnly?: boolean;
   /** Restrict viewing to holders of these roles (plus the category staff). */
@@ -231,6 +237,8 @@ export type AuditReport = {
   guildId: string;
   guildName: string;
   botInGuild: boolean;
+  /** False when forum/announcement channels in the template will be created as text. */
+  community?: boolean;
   items: AuditItem[];
   counts: Record<AuditAction, number>;
 };

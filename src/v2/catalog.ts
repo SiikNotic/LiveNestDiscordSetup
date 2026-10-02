@@ -240,34 +240,78 @@ export const INSTALLABLE = CATALOG.filter((t) => t.installable);
 /** LiveNest installer (Supabase edge functions). */
 export const API = "https://zxpentlarsbdilmyfxfc.supabase.co/functions/v1";
 
+/** A template as returned by the installer (discord-server ?action=templates). */
+export type RemoteTemplate = {
+  id: string;
+  definition?: {
+    roles?: Array<{ key: string; en: string; color?: number }>;
+    categories?: Array<{ key: string; en: string }>;
+    channels?: Array<{ key: string; category: string; type: number; en: string }>;
+  };
+};
+
+const KIND_BY_TYPE: Record<number, Channel["kind"]> = {
+  2: "voice",
+  5: "announcement",
+  15: "forum",
+};
+
+/** Builds the preview structure from the installer's own definition (English names). */
+function structureFrom(def: NonNullable<RemoteTemplate["definition"]>) {
+  const categories: Category[] = (def.categories ?? []).map((c) => ({
+    name: c.en,
+    channels: (def.channels ?? [])
+      .filter((ch) => ch.category === c.key)
+      .map((ch) => ({ name: ch.en, kind: KIND_BY_TYPE[ch.type] ?? "text" })),
+  }));
+  const roles: Role[] = (def.roles ?? []).map((r) => ({
+    name: r.en,
+    color: r.color ? `#${r.color.toString(16).padStart(6, "0")}` : ROLE_NEUTRAL,
+  }));
+  return { categories, roles };
+}
+
 /**
- * Marks templates as installable once the installer reports them (action=templates).
- * Mutates the shared catalog in place and returns true when anything changed, so the
- * caller can re-render. Unknown ids are ignored.
+ * Applies the installer's catalogue to the shared catalog, in place:
+ * - templates it lists become installable;
+ * - the six original templates take their preview from the installer's definition,
+ *   so what you see is exactly what gets installed.
+ * Returns true when anything changed, so the caller can re-render. Unknown ids are ignored.
  */
-export function activateTemplates(ids: Iterable<string>): boolean {
-  const wanted = new Set(ids);
+export function activateTemplates(remote: RemoteTemplate[]): boolean {
+  const byId = new Map(remote.map((r) => [r.id, r]));
   let changed = false;
   for (const t of CATALOG) {
-    if (!t.installable && wanted.has(t.id)) {
+    const r = byId.get(t.id);
+    if (!r) continue;
+    if (!t.installable) {
       t.installable = true;
       INSTALLABLE.push(t);
+      changed = true;
+    }
+    if (installableIds.has(t.id) && r.definition?.categories?.length) {
+      const { categories, roles } = structureFrom(r.definition);
+      t.categories = categories;
+      t.roles = roles;
+      t.channels = categories.reduce((n, c) => n + c.channels.length, 0);
+      t.roleCount = roles.length;
       changed = true;
     }
   }
   return changed;
 }
 
-/** Asks the installer which templates it can build; silently keeps the defaults on any failure. */
-export async function fetchInstallableIds(session?: string): Promise<string[]> {
+/** Asks the installer for its catalogue; silently keeps the defaults on any failure. */
+export async function fetchRemoteTemplates(session?: string): Promise<RemoteTemplate[]> {
   try {
     const r = await fetch(`${API}/discord-server?action=templates`, {
       headers: session ? { Authorization: `Bearer ${session}` } : {},
     });
     if (!r.ok) return [];
-    const d = (await r.json()) as { templates?: Array<{ id: string } | string>; ids?: string[] };
-    const list = d.templates ?? d.ids ?? [];
-    return list.map((x) => (typeof x === "string" ? x : x.id)).filter(Boolean);
+    const d = (await r.json()) as { templates?: Array<RemoteTemplate | string> };
+    return (d.templates ?? [])
+      .map((x) => (typeof x === "string" ? { id: x } : x))
+      .filter((x) => Boolean(x?.id));
   } catch {
     return [];
   }

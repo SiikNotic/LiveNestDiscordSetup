@@ -21,12 +21,10 @@ import {
   X,
 } from "lucide-react";
 
-import { INSTALLABLE, type CatalogTemplate, type Lang } from "./catalog";
+import { API, INSTALLABLE, type CatalogTemplate, type Lang } from "./catalog";
 import { LangToggle, LogoMark } from "./Landing";
 import { DiscordRail, DiscordSidebar, Gallery, TemplateCard, TemplateDialog } from "./ui";
 
-/** LiveNest installer (Supabase edge functions). Unchanged from the previous dashboard. */
-const API = "https://zxpentlarsbdilmyfxfc.supabase.co/functions/v1";
 const SESSION_KEY = "livenest_discord_session";
 
 type Page = "dashboard" | "templates" | "builder" | "server" | "activity" | "settings";
@@ -74,7 +72,7 @@ const T = {
     bTitle: "Build it before you install it.",
     steps: ["Template", "Language", "Server", "Review"],
     noTemplate: "No template selected yet.",
-    noTemplateBody: "Pick one from the library — the six marked “Installable now” work today.",
+    noTemplateBody: "Pick one from the library and press “Use this template”.",
     browse: "Browse templates",
     change: "Change template",
     next: "Continue",
@@ -175,8 +173,7 @@ const T = {
     bTitle: "Constrúyelo antes de instalarlo.",
     steps: ["Plantilla", "Idioma", "Servidor", "Revisión"],
     noTemplate: "Todavía no has elegido plantilla.",
-    noTemplateBody:
-      "Elige una de la biblioteca; las seis marcadas como “Instalables ya” funcionan hoy.",
+    noTemplateBody: "Elige una de la biblioteca y pulsa “Usar esta plantilla”.",
     browse: "Ver plantillas",
     change: "Cambiar plantilla",
     next: "Continuar",

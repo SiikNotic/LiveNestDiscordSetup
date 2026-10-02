@@ -157,9 +157,9 @@ export function TemplateCard({
           style={{ background: `linear-gradient(90deg, ${t.accent}, ${t.secondary})` }}
         />
         <span
-          className={t.installable ? "ln-badge is-live" : t.isNew ? "ln-badge is-new" : "ln-badge"}
+          className={t.isNew ? "ln-badge is-new" : t.installable ? "ln-badge is-live" : "ln-badge"}
         >
-          {t.installable ? c.installable : t.isNew ? c.newBadge : c.soon}
+          {t.isNew ? c.newBadge : t.installable ? c.installable : c.soon}
         </span>
         <div className="ln-card-list">
           {preview.map((cat) => (
